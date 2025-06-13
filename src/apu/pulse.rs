@@ -5,13 +5,14 @@ pub enum PulseRegister {
 
 #[derive(Debug)]
 pub struct Pulse {
+    //Variables set by registers
     duty_cycle: u8,
     length_counter_halt: bool,
     constant_flag: bool,
     envelope_divider: u8,
 
     sweep_enabled: bool,
-    sweep_period: u8,
+    sweep_period_value: u8,
     sweep_negate: bool,
     sweep_shift: u8,
 
@@ -20,8 +21,13 @@ pub struct Pulse {
 
     length_counter_enabled: bool,
 
+    //Internal Variables
     period_counter: u16,
-    duty_sequencer: u8
+    duty_sequencer: u8,
+    sweep_counter: u8,
+    sweep_target_period: u16,
+    sweep_use_two_complemet: bool,
+    sweep_reload: bool,
 }
 
 
@@ -34,15 +40,16 @@ impl Pulse {
         [1,1,1,1,1,1,0,0],
     ];
 
-    pub fn new() -> Pulse {
+    pub fn new(is_channel_1: bool) -> Pulse {
         Pulse {
+            
             duty_cycle: 0,
             length_counter_halt: false,
             constant_flag: false,
             envelope_divider: 0,
 
             sweep_enabled: false,
-            sweep_period: 0,
+            sweep_period_value: 0,
             sweep_negate: false,
             sweep_shift: 0,
 
@@ -51,8 +58,14 @@ impl Pulse {
 
             length_counter_enabled: false,
 
+            
             period_counter: 0,
             duty_sequencer: 0,
+
+            sweep_counter: 0,
+            sweep_target_period: 0,
+            sweep_use_two_complemet: !is_channel_1,
+            sweep_reload: false,
         }
     }
 
@@ -73,18 +86,24 @@ impl Pulse {
             },
             PulseRegister::R1 => {
                 self.sweep_enabled = byte & 0b1000_0000 > 0;
-                self.sweep_period = (byte & 0b0111_0000) >> 4;
+                self.sweep_period_value = (byte & 0b0111_0000) >> 4;
                 self.sweep_negate = byte & 0b0000_1000 > 0;
                 self.sweep_shift = byte & 0b0000_0111;
+
+                self.update_sweep_target_period();
+                self.sweep_counter = self.sweep_period_value;
+                self.sweep_reload = true 
             },
             PulseRegister::R2 => {
                 self.period_value = (self.period_value & 0xFF00) + (byte as u16);
+                self.update_sweep_target_period();
             },
             PulseRegister::R3 => {
                 self.period_value = (self.period_value & 0x00FF) + (((byte & 0b0000_0111) as u16) << 8 );
                 self.length_value = byte >> 3;
 
                 self.duty_sequencer = 0;
+                self.update_sweep_target_period();
             },
         }
     }
@@ -104,15 +123,48 @@ impl Pulse {
     }
 
     pub fn clock_sweep(&mut self) {
-
+        if self.sweep_counter == 0{
+            self.sweep_counter = self.sweep_period_value;
+            if self.sweep_enabled && self.sweep_shift > 0 && !self.is_mute_sweep() {
+                self.period_value = self.sweep_target_period;
+                self.update_sweep_target_period();
+                //println!("{}", 1789773./(16.*(1. + self.period_value as f32)))
+            }
+        } else if self.sweep_reload {
+            self.sweep_counter = self.sweep_period_value;
+            self.sweep_reload = false;
+        } else {
+            self.sweep_counter -= 1;
+        }
     }
 
     pub fn clock_envelop(&mut self) {
 
     }
 
+    pub fn update_sweep_target_period(&mut self) {
+        let delta: u16 = self.period_value >> self.sweep_shift;
+        if self.sweep_negate {
+            self.sweep_target_period = self.period_value.saturating_sub(delta);
+            if !self.sweep_use_two_complemet {
+                self.sweep_target_period = self.period_value.saturating_sub(1);
+            }
+        }
+        else {
+            self.sweep_target_period += delta;
+        }
+    }
+
+    fn is_mute_sweep(&self) -> bool{
+        self.period_value < 8 || self.sweep_target_period > 0x7FF
+    }
+
+    fn is_mute(&self) -> bool {
+        self.is_mute_sweep()
+    }
+
     pub fn output(&self) -> u8 {
-        if self.period_value < 8 {
+        if self.is_mute() {
             0
         } else {
             self.envelope_divider * Pulse::DUTY_SEQUENCE[self.duty_cycle as usize][self.duty_sequencer as usize]

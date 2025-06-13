@@ -36,8 +36,8 @@ impl APU {
 
             frame_counter: FrameCounter::new(),
 
-            pulse1: Pulse::new(), 
-            pulse2: Pulse::new(),
+            pulse1: Pulse::new(true), 
+            pulse2: Pulse::new(false),
 
             clock_counter: 0
 

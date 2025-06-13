@@ -8,6 +8,7 @@ fn main() {
     let mut apu = APU::new();
 
     apu.write_opp(0x4000, 0b1000_1111);
+    apu.write_opp(0x4001, 0b0000_1000);
     apu.write_opp(0x4002, 0xFD); //440Hz = 0x0FD
     apu.write_opp(0x4003, 0x00);
 
