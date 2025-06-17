@@ -1,3 +1,4 @@
+use crate::apu::LENGTH_TABLE;
 
 pub enum PulseRegister {
     R0, R1, R2, R3
@@ -6,6 +7,8 @@ pub enum PulseRegister {
 #[derive(Debug)]
 pub struct Pulse {
     //Variables set by registers
+    enabled: bool,
+
     duty_cycle: u8,
     length_counter_halt: bool,
     constant_flag: bool,
@@ -19,11 +22,10 @@ pub struct Pulse {
     period_value: u16,
     length_value: u8,
 
-    length_counter_enabled: bool,
-
     //Internal Variables
     period_counter: u16,
     duty_sequencer: u8,
+    length_counter: u8,
     sweep_counter: u8,
     sweep_target_period: u16,
     sweep_use_two_complemet: bool,
@@ -42,7 +44,8 @@ impl Pulse {
 
     pub fn new(is_channel_1: bool) -> Pulse {
         Pulse {
-            
+            enabled: false,
+
             duty_cycle: 0,
             length_counter_halt: false,
             constant_flag: false,
@@ -55,9 +58,7 @@ impl Pulse {
 
             period_value: 0,
             length_value: 0,
-
-            length_counter_enabled: false,
-
+            length_counter: 0,
             
             period_counter: 0,
             duty_sequencer: 0,
@@ -102,9 +103,19 @@ impl Pulse {
                 self.period_value = (self.period_value & 0x00FF) + (((byte & 0b0000_0111) as u16) << 8 );
                 self.length_value = byte >> 3;
 
+                self.length_counter = if self.enabled {
+                    LENGTH_TABLE[self.length_value as usize]
+                } else {0};
                 self.duty_sequencer = 0;
                 self.update_sweep_target_period();
             },
+        }
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        if !enabled {
+            self.length_value = 0;
         }
     }
 
@@ -119,6 +130,9 @@ impl Pulse {
     }
 
     pub fn clock_length(&mut self) {
+        if !self.length_counter_halt && self.length_value > 0 {
+            self.length_value -= 1
+        }
 
     }
 
@@ -160,7 +174,7 @@ impl Pulse {
     }
 
     fn is_mute(&self) -> bool {
-        self.is_mute_sweep()
+        !self.enabled || self.length_value == 0 || self.is_mute_sweep()
     }
 
     pub fn output(&self) -> u8 {
