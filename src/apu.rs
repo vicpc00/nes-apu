@@ -1,5 +1,6 @@
 pub mod registers;
 pub mod frame_counter;
+pub mod envelope;
 pub mod pulse;
 
 

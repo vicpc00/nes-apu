@@ -1,4 +1,5 @@
 use crate::apu::LENGTH_TABLE;
+use crate::apu::envelope::Envelope;
 
 pub enum PulseRegister {
     R0, R1, R2, R3
@@ -23,6 +24,8 @@ pub struct Pulse {
     length_value: u8,
 
     //Internal Variables
+    envelope: Envelope,
+
     period_counter: u16,
     duty_sequencer: u8,
     length_counter: u8,
@@ -60,6 +63,8 @@ impl Pulse {
             length_value: 0,
             length_counter: 0,
             
+            envelope: Envelope::new(),
+
             period_counter: 0,
             duty_sequencer: 0,
 
@@ -84,6 +89,8 @@ impl Pulse {
                 self.length_counter_halt = byte & 0b0010_0000 > 0;
                 self.constant_flag = byte & 0b0001_0000 > 0;
                 self.envelope_divider = byte & 0b0000_1111;
+
+                self.envelope.load_register(byte);
             },
             PulseRegister::R1 => {
                 self.sweep_enabled = byte & 0b1000_0000 > 0;
@@ -108,6 +115,7 @@ impl Pulse {
                 } else {0};
                 self.duty_sequencer = 0;
                 self.update_sweep_target_period();
+                self.envelope.set_start();
             },
         }
     }
@@ -153,7 +161,7 @@ impl Pulse {
     }
 
     pub fn clock_envelop(&mut self) {
-
+        self.envelope.clock();
     }
 
     pub fn update_sweep_target_period(&mut self) {
@@ -181,7 +189,7 @@ impl Pulse {
         if self.is_mute() {
             0
         } else {
-            self.envelope_divider * Pulse::DUTY_SEQUENCE[self.duty_cycle as usize][self.duty_sequencer as usize]
+            self.envelope.volume() * Pulse::DUTY_SEQUENCE[self.duty_cycle as usize][self.duty_sequencer as usize]
         }
     }
 }
