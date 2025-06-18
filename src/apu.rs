@@ -2,11 +2,13 @@ pub mod registers;
 pub mod frame_counter;
 pub mod envelope;
 pub mod pulse;
+pub mod triangle;
 
 
 use crate::apu::frame_counter::FrameCounter;
 use crate::apu::registers::{MappedAddress, Registers};
 use crate::apu::pulse::Pulse;
+use crate::apu::triangle::Triangle;
 
 //twice the CPU freq of 1.789773 MHz because of the pulse
 const MAIN_FREQ: u32 = 21_477_270/6; 
@@ -31,8 +33,9 @@ pub struct APU {
 
     frame_counter: FrameCounter,
 
-    pulse1: Pulse,
-    pulse2: Pulse,
+    pub pulse1: Pulse,
+    pub pulse2: Pulse,
+    pub triangle: Triangle,
 
     clock_counter: u32,
 }
@@ -46,6 +49,7 @@ impl APU {
 
             pulse1: Pulse::new(true), 
             pulse2: Pulse::new(false),
+            triangle: Triangle::new(),
 
             clock_counter: 0
 
@@ -66,12 +70,16 @@ impl APU {
             MappedAddress::Pulse2(reg) => {
                 self.pulse2.load_register(reg, byte);
             }
+            MappedAddress::Triangle(reg) => {
+                self.triangle.load_register(reg, byte);
+            }
             MappedAddress::FrameRegister => {
                 self.frame_counter.load_reguister(byte);
             }
             MappedAddress::StatusRegister => {
                 self.pulse1.set_enabled(byte & 0b0000_0001 > 0);
                 self.pulse2.set_enabled(byte & 0b0000_0010 > 0);
+                self.triangle.set_enabled(byte & 0b0000_0100 > 0);
             }
             _ => {}
         }
@@ -87,16 +95,20 @@ impl APU {
             self.pulse1.clock_timer();
             self.pulse2.clock_timer();
         }
-        
+        if self.clock_counter % 2 == 0 { 
+            self.triangle.clock_timer();
+        }
 
         if self.frame_counter.clock() {
             if self.frame_counter.sequencer_signals.envelope_clock {
                 self.pulse1.clock_envelop();
                 self.pulse2.clock_envelop();
+                self.triangle.clock_linear();
             }
             if self.frame_counter.sequencer_signals.length_clock {
                 self.pulse1.clock_length();
                 self.pulse2.clock_length();
+                self.triangle.clock_length();
                 self.pulse1.clock_sweep();
                 self.pulse2.clock_sweep();
             }
@@ -109,8 +121,14 @@ impl APU {
         let pulse2 = self.pulse2.output() as f32;
 
         let pulse_out: f32 = 95.88 / (8128. / (pulse1 + pulse2) + 100.);
+
+        let triangle = self.triangle.output() as f32;
+        let noise = 0. as f32;
+        let dmc = 0. as f32;
+
+        let tnd_out: f32 = 159.79 / (100. + 1. / (triangle / 8227. + noise / 12241. + dmc / 22638.));
         
-        pulse_out
+        pulse_out + tnd_out
     }
 
     fn is_channel_enabled(&self, channel: Channel) -> bool {

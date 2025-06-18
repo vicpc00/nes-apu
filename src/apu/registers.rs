@@ -1,11 +1,12 @@
 
 use crate::apu::Channel;
 use crate::apu::pulse::PulseRegister;
+use crate::apu::triangle::TriangleRegister;
 
 pub enum MappedAddress {
     Pulse1(PulseRegister),
     Pulse2(PulseRegister),
-    Triangle,
+    Triangle(TriangleRegister),
     Noise,
     DMC,
     StatusRegister,
@@ -35,10 +36,10 @@ impl Registers {
             0x05 => MappedAddress::Pulse2(PulseRegister::R1),
             0x06 => MappedAddress::Pulse2(PulseRegister::R2),
             0x07 => MappedAddress::Pulse2(PulseRegister::R3),
-            0x08 => MappedAddress::NotUsed,
-            0x09 => MappedAddress::NotUsed,
-            0x0A => MappedAddress::NotUsed,
-            0x0B => MappedAddress::NotUsed,
+            0x08 => MappedAddress::Triangle(TriangleRegister::R0),
+            0x09 => MappedAddress::Triangle(TriangleRegister::R1),
+            0x0A => MappedAddress::Triangle(TriangleRegister::R2),
+            0x0B => MappedAddress::Triangle(TriangleRegister::R3),
             0x0C => MappedAddress::NotUsed,
             0x0D => MappedAddress::NotUsed,
             0x0E => MappedAddress::NotUsed,
