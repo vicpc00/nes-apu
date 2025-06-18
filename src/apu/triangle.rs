@@ -92,14 +92,13 @@ impl Triangle {
         } else {
             self.period_counter -= 1;
         }
-        //println!("pulse clock {}, {}", self.period_counter, self.duty_sequencer);
     }
 
     pub fn clock_linear(&mut self) {
         if self.linear_counter_reload {
             self.linear_counter = self.linear_counter_value;
         } else {
-            self.linear_counter_value = self.linear_counter_value.saturating_sub(1);
+            self.linear_counter = self.linear_counter.saturating_sub(1);
         }
         if !self.control_flag {
             self.linear_counter_reload = false;
@@ -113,7 +112,6 @@ impl Triangle {
     }
 
     pub fn output(&self) -> u8 {
-        //println!("{}, {}", self.sequence_counter, Triangle::SEQUENCE[self.sequence_counter as usize]);
         Triangle::SEQUENCE[self.sequence_counter as usize]
     }
 }
