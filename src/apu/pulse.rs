@@ -123,7 +123,7 @@ impl Pulse {
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         if !enabled {
-            self.length_value = 0;
+            self.length_counter = 0;
         }
     }
 
@@ -138,8 +138,8 @@ impl Pulse {
     }
 
     pub fn clock_length(&mut self) {
-        if !self.length_counter_halt && self.length_value > 0 {
-            self.length_value -= 1
+        if !self.length_counter_halt && self.length_counter > 0 {
+            self.length_counter -= 1
         }
 
     }
@@ -182,7 +182,7 @@ impl Pulse {
     }
 
     fn is_mute(&self) -> bool {
-        !self.enabled || self.length_value == 0 || self.is_mute_sweep()
+        !self.enabled || self.length_counter == 0 || self.is_mute_sweep()
     }
 
     pub fn output(&self) -> u8 {
