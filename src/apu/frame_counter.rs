@@ -15,7 +15,7 @@ pub struct FrameCounter
     divider_counter: u32,
     sequence_counter: u8,
 
-    pub sequencer_signals: FrameCounterClocks
+    pub sequencer_signals: FrameCounterClocks,
 }
 
 pub struct FrameCounterClocks {
@@ -44,13 +44,13 @@ impl FrameCounter
                 length_clock: false, 
                 envelope_clock: false, 
                 interrupt: false
-            }
+            },
         }
     }
     
 
     pub fn load_reguister(&mut self, byte: u8) {
-        self.mode = if byte & 0b1000_0000 > 0 {
+        self.mode = if byte & 0b1000_0000 == 0 {
             Mode::FourStep
         } else{
             Mode::FiveStep
