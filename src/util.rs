@@ -10,7 +10,6 @@ pub fn encode_dm(signal: &Vec<f32>, max_val: f32) -> Vec<u8> {
     let delta: f32 = 2.*max_val/128.;
     let lim_pos = 63.*delta;
     let lim_neg = -64.*delta;
-    println!("{} {} {}", delta, lim_pos, lim_neg);
 
     let mut curr_value: f32 = 0.;
     let mut bit_count: u8 = 0;
@@ -32,7 +31,6 @@ pub fn encode_dm(signal: &Vec<f32>, max_val: f32) -> Vec<u8> {
             code = 0;
             out.push(code);
         }
-        println!("{}, {}", curr_value, sample);
         #[cfg(debug_assertions)]
         encoded.push(curr_value);
     }

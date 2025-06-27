@@ -64,5 +64,4 @@ fn main() {
                                  .map(|s| {s.unwrap()})
                                  .collect();
     let dm_encoded = util::encode_dm(&signal, 0.5);
-    println!("{} {}", dm_encoded.len(), signal.len());
 }
