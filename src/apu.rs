@@ -4,10 +4,12 @@ pub mod envelope;
 pub mod pulse;
 pub mod triangle;
 pub mod noise;
+pub mod memory;
 
 
 use crate::apu::frame_counter::FrameCounter;
 use crate::apu::registers::{MappedAddress, Registers};
+use crate::apu::memory::Memory;
 use crate::apu::pulse::Pulse;
 use crate::apu::triangle::Triangle;
 use crate::apu::noise::Noise;
@@ -32,6 +34,7 @@ pub enum Channel {
 
 pub struct APU {
     registers: Registers,
+    sample_memory: Memory,
 
     frame_counter: FrameCounter,
 
@@ -47,6 +50,7 @@ impl APU {
     pub fn new() -> APU {
         APU { 
             registers: Registers::new(),
+            sample_memory: Memory::new(),
 
             frame_counter: FrameCounter::new(),
 
@@ -62,35 +66,47 @@ impl APU {
     }
 
     pub fn write_opp(&mut self, address: u16, byte: u8) {
-        if address < 0x4000 || address > 0x4017 {
-            panic!("Address aout of range")
+        match address {
+            0x4000..=0x4017 => {
+                let addr = address.to_be_bytes()[1]; 
+                let mapped_addr = self.registers.write_register(addr, byte);
+                match mapped_addr {
+                    MappedAddress::Pulse1(reg) => {
+                        self.pulse1.load_register(reg, byte);
+                    }
+                    MappedAddress::Pulse2(reg) => {
+                        self.pulse2.load_register(reg, byte);
+                    }
+                    MappedAddress::Triangle(reg) => {
+                        self.triangle.load_register(reg, byte);
+                    }
+                    MappedAddress::Noise(reg) => {
+                        self.noise.load_register(reg, byte);
+                    }
+                    MappedAddress::FrameRegister => {
+                        self.frame_counter.load_reguister(byte);
+                    }
+                    MappedAddress::StatusRegister => {
+                        self.pulse1.set_enabled(byte & 0b0000_0001 > 0);
+                        self.pulse2.set_enabled(byte & 0b0000_0010 > 0);
+                        self.triangle.set_enabled(byte & 0b0000_0100 > 0);
+                        self.noise.set_enabled(byte & 0b0000_1000 > 0);
+                    }
+                    _ => {}
+                }
+            }
+            0xC000..=0xCFFF => {
+                self.sample_memory.load_byte(address, byte);
+            }
+            _ => {
+                panic!("Address out of range")
+            }
         }
-        let addr = address.to_be_bytes()[1]; 
-        let mapped_addr = self.registers.write_register(addr, byte);
-        match mapped_addr {
-            MappedAddress::Pulse1(reg) => {
-                self.pulse1.load_register(reg, byte);
-            }
-            MappedAddress::Pulse2(reg) => {
-                self.pulse2.load_register(reg, byte);
-            }
-            MappedAddress::Triangle(reg) => {
-                self.triangle.load_register(reg, byte);
-            }
-            MappedAddress::Noise(reg) => {
-                self.noise.load_register(reg, byte);
-            }
-            MappedAddress::FrameRegister => {
-                self.frame_counter.load_reguister(byte);
-            }
-            MappedAddress::StatusRegister => {
-                self.pulse1.set_enabled(byte & 0b0000_0001 > 0);
-                self.pulse2.set_enabled(byte & 0b0000_0010 > 0);
-                self.triangle.set_enabled(byte & 0b0000_0100 > 0);
-                self.noise.set_enabled(byte & 0b0000_1000 > 0);
-            }
-            _ => {}
-        }
+        
+    }
+
+    pub fn load_sample(&mut self, address: u16, sample: &Vec<u8>) {
+        self.sample_memory.load_bytes(address, sample);
     }
 
     pub fn clock(&mut self) {
