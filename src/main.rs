@@ -1,13 +1,13 @@
 
 use hound;
 
-use nes_apu::{apu::APU, dac::filter::Filter};
+use nes_apu::{apu::APU, dac::filter::Filter, util};
 
 fn main() {
 
     let mut apu = APU::new();
 
-    apu.write_opp(0x4015, 0b0000_0100);
+    apu.write_opp(0x4015, 0b0000_1000);
     apu.write_opp(0x4017, 0b0000_0000);
 
     //apu.write_opp(0x4000, 0b1000_0011);
@@ -21,9 +21,15 @@ fn main() {
     apu.write_opp(0x400A, 0x7E);
     apu.write_opp(0x400B, (0x14 << 3) + 0x00);
 
+    apu.write_opp(0x400C, 0b0000_0011);
+    apu.write_opp(0x400E, 0x07);
+    apu.write_opp(0x400F, 0x16 << 3);
+
+
     println!("{:?}", apu.pulse1);
     println!("{:?}", apu.pulse2);
     println!("{:?}", apu.triangle);
+    println!("{:?}", apu.noise);
 
     let final_fs = 44100;
     let apu_downsample = 2;
@@ -52,4 +58,11 @@ fn main() {
             writer.write_sample(filtered_sample).unwrap();
         }
     }
+
+    let mut reader = hound::WavReader::open("pcm-sample.wav").unwrap();
+    let signal: Vec<f32> = reader.samples::<f32>()
+                                 .map(|s| {s.unwrap()})
+                                 .collect();
+    let dm_encoded = util::encode_dm(&signal, 0.5);
+    println!("{} {}", dm_encoded.len(), signal.len());
 }
