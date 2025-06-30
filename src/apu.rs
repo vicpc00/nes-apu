@@ -4,6 +4,7 @@ pub mod envelope;
 pub mod pulse;
 pub mod triangle;
 pub mod noise;
+pub mod dmc;
 pub mod memory;
 
 
@@ -13,6 +14,7 @@ use crate::apu::memory::Memory;
 use crate::apu::pulse::Pulse;
 use crate::apu::triangle::Triangle;
 use crate::apu::noise::Noise;
+use crate::apu::dmc::DMC;
 
 //twice the CPU freq of 1.789773 MHz because of the pulse
 const MAIN_FREQ: u32 = 21_477_270/6; 
@@ -42,6 +44,7 @@ pub struct APU {
     pub pulse2: Pulse,
     pub triangle: Triangle,
     pub noise: Noise,
+    pub dmc: DMC,
 
     clock_counter: u32,
 }
@@ -58,6 +61,8 @@ impl APU {
             pulse2: Pulse::new(false),
             triangle: Triangle::new(),
             noise: Noise::new(),
+            dmc: DMC::new(),
+
 
             clock_counter: 0
 
@@ -83,6 +88,9 @@ impl APU {
                     MappedAddress::Noise(reg) => {
                         self.noise.load_register(reg, byte);
                     }
+                    MappedAddress::DMC(reg) => {
+                        self.dmc.load_register(reg, byte);
+                    }
                     MappedAddress::FrameRegister => {
                         self.frame_counter.load_reguister(byte);
                     }
@@ -91,6 +99,8 @@ impl APU {
                         self.pulse2.set_enabled(byte & 0b0000_0010 > 0);
                         self.triangle.set_enabled(byte & 0b0000_0100 > 0);
                         self.noise.set_enabled(byte & 0b0000_1000 > 0);
+                        self.dmc.set_enabled(byte & 0b0001_0000 > 0);
+                        self.dmc_fetch();
                     }
                     _ => {}
                 }
@@ -113,7 +123,6 @@ impl APU {
         self.clock_counter += 1;
         self.clock_counter %= 6*MAIN_FREQ;
 
-        //println!("cpu clock {}", self.clock_counter);
         // divided by 4 because freq is twice the normal
         if self.clock_counter % 4 == 0 { 
             self.pulse1.clock_timer();
@@ -122,6 +131,7 @@ impl APU {
         if self.clock_counter % 2 == 0 { 
             self.triangle.clock_timer();
             self.noise.clock_timer();
+            self.dmc.clock_timer();
         }
 
         if self.frame_counter.clock() {
@@ -141,6 +151,7 @@ impl APU {
             }
 
         };
+        self.dmc_fetch();
     }
 
     pub fn output(&self) -> f32 {
@@ -151,7 +162,7 @@ impl APU {
 
         let triangle = self.triangle.output() as f32;
         let noise = self.noise.output() as f32;
-        let dmc = 0. as f32;
+        let dmc = self.dmc.output() as f32;
 
         let tnd_out: f32 = 159.79 / (100. + 1. / (triangle / 8227. + noise / 12241. + dmc / 22638.));
         
@@ -166,6 +177,12 @@ impl APU {
             Channel::Triangle => status & 0b0000_0100 > 0,
             Channel::Noise    => status & 0b0000_1000 > 0,
             Channel::DMC      => status & 0b0001_0000 > 0,
+        }
+    }
+
+    fn dmc_fetch(&mut self) {
+        if self.dmc.request_fetch {
+            self.dmc.fetch_sample(&self.sample_memory);
         }
     }
 

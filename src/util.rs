@@ -16,11 +16,11 @@ pub fn encode_dm(signal: &Vec<f32>, max_val: f32) -> Vec<u8> {
     let mut code: u8 = 0;
     for &sample in signal {
         let bit: u8 = if curr_value < sample {
-            curr_value += delta;
+            curr_value += 2.*delta;
             curr_value = curr_value.min(lim_pos);
             1
         } else {
-            curr_value -= delta;
+            curr_value -= 2.*delta;
             curr_value = curr_value.max(lim_neg);
             0
         };
@@ -28,8 +28,8 @@ pub fn encode_dm(signal: &Vec<f32>, max_val: f32) -> Vec<u8> {
         bit_count += 1;
         if bit_count == 8 {
             bit_count = 0;
-            code = 0;
             out.push(code);
+            code = 0;
         }
         #[cfg(debug_assertions)]
         encoded.push(curr_value);

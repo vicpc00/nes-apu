@@ -1,12 +1,12 @@
 
-
+//TODO: implement banks
 pub struct Memory {
-    pub memory: [u8; 0x1000],
+    pub memory: [u8; 0x10000],
 }
 
 impl Memory {
     pub fn new() -> Memory {
-        Memory { memory: [0; 0x1000] }
+        Memory { memory: [0; 0x10000] }
     }
 
     pub fn get_byte(&self, addr: u16) -> u8 {
@@ -22,6 +22,7 @@ impl Memory {
         for (i, byte) in bytes.iter().enumerate() {
             self.memory[start+i] = *byte;
         }
+        
     }
     
 }

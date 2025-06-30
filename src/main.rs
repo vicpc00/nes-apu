@@ -4,7 +4,11 @@ use hound;
 use nes_apu::{apu::APU, dac::filter::Filter, util};
 
 fn main() {
+    //ptn_test();
+    dmc_test();
+}
 
+fn ptn_test() {
     let mut apu = APU::new();
 
     apu.write_opp(0x4015, 0b0000_1000);
@@ -58,10 +62,53 @@ fn main() {
             writer.write_sample(filtered_sample).unwrap();
         }
     }
+}
+
+fn dmc_test() {
+    let mut apu = APU::new();
 
     let mut reader = hound::WavReader::open("pcm-sample.wav").unwrap();
     let signal: Vec<f32> = reader.samples::<f32>()
                                  .map(|s| {s.unwrap()})
                                  .collect();
     let dm_encoded = util::encode_dm(&signal, 0.5);
+
+    apu.load_sample(0xC000, &dm_encoded);
+
+    apu.write_opp(0x4010, 0b0100_1111);
+    apu.write_opp(0x4011, 0x40); //64, half of range
+    apu.write_opp(0x4012, 0x00);
+    apu.write_opp(0x4013, 0xFF);
+
+    apu.write_opp(0x4015, 0b0001_0000);
+
+    println!("{:?}", apu.dmc);
+
+    let final_fs = 44100;
+    let apu_downsample = 2;
+    let apu_fs = apu_downsample*final_fs;
+
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: final_fs,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+
+    let cps = (21_477_270/6)/apu_fs;
+
+    let mut aa_filter = Filter::lowpass_blackman(256, 20000., apu_fs as f32);
+
+    let mut writer = hound::WavWriter::create("out_dmc.wav", spec).unwrap();
+
+    for sample_count in 0 .. 3*44100 {
+        for _ in 0..cps {
+            apu.clock();
+        }
+        let sample = apu.output();
+        let filtered_sample = aa_filter.step(sample);
+        if sample_count % apu_downsample == 0 {
+            writer.write_sample(filtered_sample).unwrap();
+        }
+    }
 }
