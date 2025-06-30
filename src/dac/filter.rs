@@ -66,12 +66,11 @@ impl Filter {
 
         for n in -m/2..m/2+1 {
             let t = n as f32;
-            let sinc = (PI*fc*t).sin()/(PI*t + 1e-8);
+            let sinc = if n != 0 {(PI*fc*t).sin()/(PI*t + 1e-8)} else {fc};
             let x = 2.0*PI*t/(m as f32);
             let win = 0.42 + 0.5*(x).cos() + 0.08*(2.0*x).cos();
             direct_coeff.push(sinc*win);
         }
-
         Filter::new(direct_coeff, recursive_coeff)
     }
 }
