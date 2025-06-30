@@ -40,12 +40,12 @@ impl Noise {
             envelope: Envelope::new(),
 
             mode_flag: false,
-            period_value: 0,
+            period_value: Noise::RATE_TABLE[0][0],
 
             length_value: 0,
 
             length_counter: 0,
-            period_counter: 0,
+            period_counter: Noise::RATE_TABLE[0][0],
             shift_register: 1,
         }   
     }
@@ -91,6 +91,8 @@ impl Noise {
     }
 
     pub fn clock_timer(&mut self) {
+        self.period_counter -= 1;
+
         if self.period_counter == 0 {
             self.period_counter = self.period_value;
             
@@ -103,8 +105,6 @@ impl Noise {
             let feedback = b0 ^ b1;
             self.shift_register = (self.shift_register >> 1) | (feedback << 14)
 
-        } else {
-            self.period_counter -= 1;
         }
     }
 
