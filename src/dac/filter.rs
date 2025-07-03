@@ -5,8 +5,8 @@ use std::{
 };
 
 pub struct Filter {
-    direct_coeff: Vec<f32>,
-    recursive_coeff: Vec<f32>,
+    pub direct_coeff: Vec<f32>,
+    pub recursive_coeff: Vec<f32>,
 
     input_buffer: VecDeque<f32>,
     output_buffer: VecDeque<f32>,
@@ -57,7 +57,7 @@ impl Filter {
 }
 
 impl Filter {
-    pub fn lowpass_blackman(length: usize, cutoff_freq: f32, sample_freq: f32) -> Filter{
+    pub fn lowpass_blackman(length: u32, cutoff_freq: f32, sample_freq: f32) -> Filter{
         let recursive_coeff: Vec<f32> = vec![];
         let mut direct_coeff: Vec<f32> = vec![];
 
