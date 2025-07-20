@@ -9,6 +9,7 @@ fn main() {
     //dmc_test();
 }
 
+//TODO: Organize this stuff as actual unity tests
 fn ptn_test() {
     let mut apu = APU::new();
 
@@ -102,7 +103,7 @@ fn dmc_test() {
 
     let cps = (21_477_270/6)/apu_fs;
 
-    let mut aa_filter = Filter::lowpass_blackman(256, 20000., apu_fs as f32);
+    let mut aa_filter = Filter::lowpass_blackman(128, 20000, apu_fs);
 
     let mut writer = hound::WavWriter::create("out_dmc.wav", spec).unwrap();
 

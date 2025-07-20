@@ -20,16 +20,15 @@ impl Resampler {
             1200. * f32::log2((output_rate as f32) / ((input_rate*n/d) as f32) )
         );
         let filt_len = 2*10*u32::max(n, d);
-        let mut filt = Filter::lowpass_blackman(filt_len,
-            0.95*0.5*(u32::min(input_rate, output_rate) as f32), 
-            (n*input_rate) as f32
+        let mut filt = Filter::lowpass_blackman_norm((filt_len/2) as usize,
+            0.95/(u32::max(n, d) as f32)
         ).direct_coeff;
 
         let g = n as f32;
         for coeff in &mut filt {
             *coeff *= g
         }
-        let input_buffer_size = ((filt_len + n)/n) as usize; //ceil of filt.len()+1 and d
+        let input_buffer_size = ((filt_len + n)/n) as usize; //ceil of filt.len()+1 and n
         //TODO: otimização -> precomputar os filtros decimados. seria uma matrix n x ceil(l_f / n)
         // Talves representar como um vetor 1D com slices sendo cada filtro, a la numpy
         Resampler {

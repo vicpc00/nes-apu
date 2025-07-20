@@ -57,14 +57,18 @@ impl Filter {
 }
 
 impl Filter {
-    pub fn lowpass_blackman(length: u32, cutoff_freq: f32, sample_freq: f32) -> Filter{
-        let recursive_coeff: Vec<f32> = vec![];
+    pub fn lowpass_blackman(half_length: usize, cutoff_freq: u32, sample_freq: u32) -> Filter{
+        let fc = 2.*(cutoff_freq as f32)/(sample_freq as f32);
+        Filter::lowpass_blackman_norm(half_length, fc)
+    }
+    pub fn lowpass_blackman_norm(half_length: usize, normalized_cutoff_freq: f32) -> Filter {
+        let recursive_coeff: Vec<f32> = Vec::with_capacity(half_length+1);
         let mut direct_coeff: Vec<f32> = vec![];
 
-        let fc = 2.*cutoff_freq/sample_freq;
-        let m = length as i32;
+        let fc = normalized_cutoff_freq;
+        let m = half_length as i32;
 
-        for n in -m/2..m/2+1 {
+        for n in -m..m+1 {
             let t = n as f32;
             let sinc = if n != 0 {(PI*fc*t).sin()/(PI*t + 1e-8)} else {fc};
             let x = 2.0*PI*t/(m as f32);
