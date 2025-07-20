@@ -2,16 +2,17 @@
 use hound;
 
 use nes_apu::{apu::APU, dac::filter::Filter, util};
+use nes_apu::dac::resampler::Resampler;
 
 fn main() {
-    //ptn_test();
-    dmc_test();
+    ptn_test();
+    //dmc_test();
 }
 
 fn ptn_test() {
     let mut apu = APU::new();
 
-    apu.write_opp(0x4015, 0b0000_1000);
+    apu.write_opp(0x4015, 0b0000_0001);
     apu.write_opp(0x4017, 0b0000_0000);
 
     //apu.write_opp(0x4000, 0b1000_0011);
@@ -36,8 +37,10 @@ fn ptn_test() {
     println!("{:?}", apu.noise);
 
     let final_fs = 44100;
-    let apu_downsample = 2;
-    let apu_fs = apu_downsample*final_fs;
+
+    let apu_rate = 21_477_270/6;
+    let cps = 1;
+    let resamppler_in_rate = apu_rate/cps;
 
     let spec = hound::WavSpec {
         channels: 1,
@@ -46,20 +49,22 @@ fn ptn_test() {
         sample_format: hound::SampleFormat::Float,
     };
 
-    let cps = (21_477_270/6)/apu_fs;
+    let mut resampler = Resampler::new(resamppler_in_rate, final_fs);
 
-    let mut aa_filter = Filter::lowpass_blackman(256, 20000., apu_fs as f32);
+    //let mut aa_filter = Filter::lowpass_blackman(256, 20000., apu_fs as f32);
 
     let mut writer = hound::WavWriter::create("out.wav", spec).unwrap();
 
-    for sample_count in 0 .. 2*44100 {
-        for _ in 0..cps {
-            apu.clock();
-        }
-        let sample = apu.output();
-        let filtered_sample = aa_filter.step(sample);
-        if sample_count % apu_downsample == 0 {
-            writer.write_sample(filtered_sample).unwrap();
+    for _ in 0 .. 1*44100 {
+        loop {
+            for _ in 0..cps {
+                apu.clock();
+            }
+            if let Some(sample) = resampler.tick(apu.output()) {
+                writer.write_sample(sample).unwrap();
+                //writer.write_sample(apu.output()).unwrap();
+                break
+            }
         }
     }
 }
