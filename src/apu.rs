@@ -17,7 +17,7 @@ use crate::apu::noise::Noise;
 use crate::apu::dmc::DMC;
 
 //twice the CPU freq of 1.789773 MHz because of the pulse
-const MAIN_FREQ: u32 = 21_477_270/6; 
+pub const MAIN_FREQ: u32 = 21_477_270/6; 
 
 const LENGTH_TABLE: [u8; 0x20] = [
      10, 254,  20,   2,  40,   4,  80,   6, //00-07
