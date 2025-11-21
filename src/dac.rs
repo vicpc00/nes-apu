@@ -21,7 +21,11 @@ impl DAC {
             sample_rate: sampling_rate,
             clock_skip: clock_skip,
             resampler: Resampler::new(apu::MAIN_FREQ/(clock_skip+1), sampling_rate),
-            filters: vec![], //TODO add filters. High pass 90hz, high pass 440Hz, low pass 14kHz. All first order
+            filters: vec![
+                Filter::hipass_1p_iir(90, sampling_rate),
+                Filter::hipass_1p_iir(440, sampling_rate),
+                Filter::lowpass_1p_iir(14000, sampling_rate),
+            ], //High pass 90hz, high pass 440Hz, low pass 14kHz. All first order
             sample_count: 0,
         }
     }

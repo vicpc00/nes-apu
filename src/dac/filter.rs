@@ -77,4 +77,24 @@ impl Filter {
         }
         Filter::new(direct_coeff, recursive_coeff)
     }
+    pub fn lowpass_1p_iir(cutoff_freq: u32, sample_freq: u32) -> Filter{
+        let fc = (cutoff_freq as f32)/(sample_freq as f32);
+        let alpha = f32::exp(-2.*PI*fc);
+
+
+        Filter::new(
+            vec![1.-alpha],
+            vec![alpha]
+        )
+    }
+    pub fn hipass_1p_iir(cutoff_freq: u32, sample_freq: u32) -> Filter{
+        let fc = (cutoff_freq as f32)/(sample_freq as f32);
+        let alpha = f32::exp(-2.*PI*fc);
+
+
+        Filter::new(
+            vec![alpha, -alpha],
+            vec![alpha]
+        )
+    }
 }
